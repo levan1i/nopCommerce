@@ -1,0 +1,26 @@
+# This workflow will build a .NET project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
+
+name: Prod
+
+on:
+  push:
+    branches: [ "master" ]
+jobs:
+  build:
+
+    runs-on: prod
+
+    steps:
+    - uses: actions/setup-dotnet@v4
+      with:
+       dotnet-version: '8.0.x'
+    - uses: actions/checkout@v3
+    - name: Restore dependencies
+      run: dotnet restore
+    - name: Build
+      run: dotnet build --no-restore
+    - name: Publish
+      run: dotnet publish ./src/Presentation/Nop.Web/Nop.Web.csproj --configuration Release --no-restore --output "/www/elservice"
+    - name: Restart
+      run: sudo systemctl restart elservice.service
