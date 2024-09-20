@@ -12,9 +12,6 @@ jobs:
     runs-on: prod
 
     steps:
-    - uses: actions/setup-dotnet@v4
-      with:
-       dotnet-version: '8.0.x'
     - uses: actions/checkout@v3
     - name: Restore dependencies
       run: dotnet restore
