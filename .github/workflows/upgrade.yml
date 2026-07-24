@@ -46,7 +46,7 @@ env:
 
 jobs:
   upgrade:
-    runs-on: prod
+    runs-on: elservice-1
     steps:
       - name: Checkout upgraded source
         uses: actions/checkout@v4

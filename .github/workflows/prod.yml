@@ -9,7 +9,7 @@ on:
 jobs:
   build:
 
-    runs-on: prod
+    runs-on: elservice-1
 
     steps:
     - uses: actions/checkout@v3
