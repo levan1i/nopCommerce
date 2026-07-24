@@ -1,0 +1,154 @@
+# Upgrade nopCommerce to a newer version (manual, self-hosted "prod" runner).
+#
+# This is NOT the everyday deploy (see prod.yml). A version upgrade must replace
+# the whole application with the new-version files, keeping only the config and
+# uploaded content. Following the official guide
+# (https://docs.nopcommerce.com/en/installation-and-upgrading/upgrading-nopcommerce.html):
+#
+#   1. Back up EVERYTHING (files + database) so you can roll back.
+#   2. Remove all files from the previous version EXCEPT the JSON files in
+#      App_Data (appsettings.json / dataSettings.json / plugins.json) and, if
+#      pictures are stored on disk, \wwwroot\Images\.
+#   3. Deploy the new-version files.
+#   4. Start the app -> since 4.40 the database is migrated automatically on the
+#      first startup (no SQL upgrade script needed for a 4.8 -> latest upgrade).
+#
+# This workflow does a clean-swap deploy: publish into a fresh release folder,
+# carry over App_Data + wwwroot/Images from the live site, then atomically swap.
+# The old live folder is kept as a timestamped backup for one-command rollback.
+#
+# DATABASE: this workflow does NOT back up the database. Take your own DB backup
+# BEFORE running it -- migrations auto-apply on startup and cannot be undone.
+
+name: Upgrade
+
+on:
+  # Manual only -- an upgrade should never fire automatically on a push.
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref (branch/tag/commit) with the upgraded nopCommerce source to deploy"
+        required: true
+        default: "master"
+
+# Never let two upgrades of the same environment overlap.
+concurrency:
+  group: upgrade-prod
+  cancel-in-progress: false
+
+env:
+  # Where systemd serves the site from (matches prod.yml).
+  DEPLOY_DIR: /www/elservice
+  SERVICE: elservice.service
+  # Roots for staged releases and rollback backups (created if missing).
+  RELEASES_DIR: /www/releases
+  BACKUPS_DIR: /www/backups
+
+jobs:
+  upgrade:
+    runs-on: prod
+    steps:
+      - name: Checkout upgraded source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref }}
+
+      - name: Compute release id
+        id: rel
+        shell: bash
+        run: echo "stamp=$(date +%Y%m%d-%H%M%S)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore dependencies
+        run: dotnet restore ./src/Presentation/Nop.Web/Nop.Web.csproj
+
+      - name: Build
+        run: dotnet build ./src/Presentation/Nop.Web/Nop.Web.csproj --no-restore --configuration Release
+
+      # Publish the NEW version into a fresh, empty release folder so no stale
+      # DLLs/plugins from the old version can survive the upgrade.
+      - name: Publish new version to release folder
+        shell: bash
+        run: |
+          set -euo pipefail
+          RELEASE_DIR="${RELEASES_DIR}/elservice-${{ steps.rel.outputs.stamp }}"
+          echo "RELEASE_DIR=${RELEASE_DIR}" >> "$GITHUB_ENV"
+          sudo mkdir -p "${RELEASE_DIR}"
+          sudo dotnet publish ./src/Presentation/Nop.Web/Nop.Web.csproj \
+            --configuration Release --no-restore --output "${RELEASE_DIR}"
+
+      # Guard: refuse to continue if the live site has no App_Data yet -- that
+      # would mean there's nothing to carry over (fresh install, not an upgrade).
+      - name: Verify current install
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f "${DEPLOY_DIR}/App_Data/appsettings.json" ]; then
+            echo "::error::${DEPLOY_DIR}/App_Data/appsettings.json not found. This looks like a fresh install, not an upgrade. Aborting."
+            exit 1
+          fi
+
+      # NOTE: Back up the database yourself BEFORE running this workflow.
+      # Since 4.40 the DB is migrated automatically on first startup, so a
+      # pre-upgrade DB backup is your only rollback path for the data.
+
+      # ---- Carry over config + uploaded content into the new release -----------
+      # App_Data holds appsettings.json (connection string), dataSettings.json,
+      # plugins.json AND DataProtectionKeys (needed to keep auth cookies valid).
+      # wwwroot/Images holds file-system-stored pictures.
+      - name: Carry over App_Data and uploaded images
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Copying App_Data from live site..."
+          sudo rm -rf "${RELEASE_DIR}/App_Data"
+          sudo cp -a "${DEPLOY_DIR}/App_Data" "${RELEASE_DIR}/App_Data"
+          if [ -d "${DEPLOY_DIR}/wwwroot/Images" ]; then
+            echo "Copying wwwroot/Images from live site..."
+            sudo mkdir -p "${RELEASE_DIR}/wwwroot"
+            sudo rm -rf "${RELEASE_DIR}/wwwroot/Images"
+            sudo cp -a "${DEPLOY_DIR}/wwwroot/Images" "${RELEASE_DIR}/wwwroot/Images"
+          fi
+          # Sanity check: connection string must have survived the carry-over.
+          if [ ! -f "${RELEASE_DIR}/App_Data/appsettings.json" ]; then
+            echo "::error::appsettings.json missing in the new release after carry-over. Aborting before swap."
+            exit 1
+          fi
+
+      # ---- Atomic swap (this is the only downtime window) ----------------------
+      - name: Stop service, back up live files, swap in new version
+        shell: bash
+        run: |
+          set -euo pipefail
+          BACKUP_DIR="${BACKUPS_DIR}/elservice-${{ steps.rel.outputs.stamp }}"
+          echo "BACKUP_DIR=${BACKUP_DIR}" >> "$GITHUB_ENV"
+          sudo mkdir -p "${BACKUPS_DIR}"
+          sudo systemctl stop "${SERVICE}"
+          # Keep the entire old version as the rollback copy.
+          sudo mv "${DEPLOY_DIR}" "${BACKUP_DIR}"
+          sudo mv "${RELEASE_DIR}" "${DEPLOY_DIR}"
+
+      - name: Start service (auto-migration runs on first startup)
+        run: sudo systemctl start ${{ env.SERVICE }}
+
+      # ---- Verify; on failure show the exact rollback command ------------------
+      - name: Health check
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=""
+          for i in $(seq 1 30); do
+            if sudo systemctl is-active --quiet "${SERVICE}" \
+               && curl -fsS -o /dev/null http://localhost/; then
+              ok="yes"; break
+            fi
+            echo "Waiting for site to come up (attempt ${i}/30)..."
+            sleep 5
+          done
+          if [ -z "${ok}" ]; then
+            echo "::error::Upgrade health check failed. The old version is preserved at ${BACKUP_DIR}."
+            echo "Roll back with:"
+            echo "  sudo systemctl stop ${SERVICE} && sudo rm -rf ${DEPLOY_DIR} && sudo mv ${BACKUP_DIR} ${DEPLOY_DIR} && sudo systemctl start ${SERVICE}"
+            sudo journalctl -u "${SERVICE}" -n 100 --no-pager || true
+            exit 1
+          fi
+          echo "Upgrade complete. Rollback backup kept at ${BACKUP_DIR}."
