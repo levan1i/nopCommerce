@@ -1,4 +1,5 @@
-﻿using Nop.Core;
+﻿using Microsoft.AspNetCore.Mvc.Rendering;
+using Nop.Core;
 using Nop.Core.Domain.Common;
 using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Orders;
@@ -10,6 +11,7 @@ using Nop.Services.Catalog;
 using Nop.Services.Common;
 using Nop.Services.Customers;
 using Nop.Services.Directory;
+using Nop.Services.Helpers;
 using Nop.Services.Localization;
 using Nop.Services.Orders;
 using Nop.Services.Payments;
@@ -34,6 +36,7 @@ public partial class CheckoutModelFactory : ICheckoutModelFactory
     protected readonly ICountryService _countryService;
     protected readonly ICurrencyService _currencyService;
     protected readonly ICustomerService _customerService;
+    protected readonly IDateTimeHelper _dateTimeHelper;
     protected readonly IGenericAttributeService _genericAttributeService;
     protected readonly ILocalizationService _localizationService;
     protected readonly IOrderProcessingService _orderProcessingService;
@@ -69,6 +72,7 @@ public partial class CheckoutModelFactory : ICheckoutModelFactory
         ICountryService countryService,
         ICurrencyService currencyService,
         ICustomerService customerService,
+        IDateTimeHelper dateTimeHelper,
         IGenericAttributeService genericAttributeService,
         ILocalizationService localizationService,
         IOrderProcessingService orderProcessingService,
@@ -100,6 +104,7 @@ public partial class CheckoutModelFactory : ICheckoutModelFactory
         _countryService = countryService;
         _currencyService = currencyService;
         _customerService = customerService;
+        _dateTimeHelper = dateTimeHelper;
         _genericAttributeService = genericAttributeService;
         _localizationService = localizationService;
         _orderProcessingService = orderProcessingService;
@@ -191,9 +196,9 @@ public partial class CheckoutModelFactory : ICheckoutModelFactory
                         OpeningHours = point.OpeningHours,
                         IsPreSelected = selectedPickupPoint is not null && selectedPickupPoint.Id == point.Id,
                     };
-                    
+
                     var currentCurrency = await _workContext.GetWorkingCurrencyAsync();
-                    
+
                     //adjust rate
                     var (shippingTotal, _) = await _orderTotalCalculationService.AdjustShippingRateAsync(point.PickupFee, cart, true);
                     var (rateBase, _) = await _taxService.GetShippingPriceAsync(shippingTotal, customer);
@@ -204,8 +209,10 @@ public partial class CheckoutModelFactory : ICheckoutModelFactory
                 }).ToListAsync();
             }
             else
+            {
                 foreach (var error in pickupPointsResponse.Errors)
                     model.Warnings.Add(error);
+            }
         }
 
         //only available pickup points
@@ -232,25 +239,22 @@ public partial class CheckoutModelFactory : ICheckoutModelFactory
     /// <summary>
     /// Prepare billing address model
     /// </summary>
+    /// <param name="model">Billing address model</param>
     /// <param name="cart">Cart</param>
     /// <param name="selectedCountryId">Selected country identifier</param>
     /// <param name="prePopulateNewAddressWithCustomerFields">Pre populate new address with customer fields</param>
     /// <param name="overrideAttributesXml">Override attributes xml</param>
-    /// <returns>
-    /// A task that represents the asynchronous operation
-    /// The task result contains the billing address model
-    /// </returns>
-    public virtual async Task<CheckoutBillingAddressModel> PrepareBillingAddressModelAsync(IList<ShoppingCartItem> cart,
+    /// <returns>A task that represents the asynchronous operation</returns>
+    public virtual async Task PrepareBillingAddressModelAsync(CheckoutBillingAddressModel model, IList<ShoppingCartItem> cart,
         int? selectedCountryId = null,
         bool prePopulateNewAddressWithCustomerFields = false,
         string overrideAttributesXml = "")
     {
-        var model = new CheckoutBillingAddressModel
-        {
-            ShipToSameAddressAllowed = _shippingSettings.ShipToSameAddress && await _shoppingCartService.ShoppingCartRequiresShippingAsync(cart),
-            //allow customers to enter (choose) a shipping address if "Disable Billing address step" setting is enabled
-            ShipToSameAddress = !_orderSettings.DisableBillingAddressCheckoutStep
-        };
+        ArgumentNullException.ThrowIfNull(model);
+
+        model.ShipToSameAddressAllowed = _shippingSettings.ShipToSameAddress && await _shoppingCartService.ShoppingCartRequiresShippingAsync(cart);
+        //allow customers to enter (choose) a shipping address if "Disable Billing address step" setting is enabled
+        model.ShipToSameAddress = !_orderSettings.DisableBillingAddressCheckoutStep;
 
         var customer = await _workContext.GetCurrentCustomerAsync();
         if (await _customerService.IsGuestAsync(customer) && _taxSettings.EuVatEnabled)
@@ -264,7 +268,7 @@ public partial class CheckoutModelFactory : ICheckoutModelFactory
         var addresses = await (await _customerService.GetAddressesByCustomerIdAsync(customer.Id))
             .WhereAwait(async a => !a.CountryId.HasValue || await _countryService.GetCountryByAddressAsync(a) is
                 {
-                    Published: true, 
+                    Published: true,
                     AllowsBilling: true
                 } country
                 &&
@@ -295,28 +299,21 @@ public partial class CheckoutModelFactory : ICheckoutModelFactory
             prePopulateWithCustomerFields: prePopulateNewAddressWithCustomerFields,
             customer: customer,
             overrideAttributesXml: overrideAttributesXml);
-
-        return model;
     }
 
     /// <summary>
     /// Prepare shipping address model
     /// </summary>
+    /// <param name="model">Shipping address model</param>
     /// <param name="cart">Cart</param>
     /// <param name="selectedCountryId">Selected country identifier</param>
     /// <param name="prePopulateNewAddressWithCustomerFields">Pre populate new address with customer fields</param>
     /// <param name="overrideAttributesXml">Override attributes xml</param>
-    /// <returns>
-    /// A task that represents the asynchronous operation
-    /// The task result contains the shipping address model
-    /// </returns>
-    public virtual async Task<CheckoutShippingAddressModel> PrepareShippingAddressModelAsync(IList<ShoppingCartItem> cart,
+    /// <returns>A task that represents the asynchronous operation</returns>
+    public virtual async Task PrepareShippingAddressModelAsync(CheckoutShippingAddressModel model, IList<ShoppingCartItem> cart,
         int? selectedCountryId = null, bool prePopulateNewAddressWithCustomerFields = false, string overrideAttributesXml = "")
     {
-        var model = new CheckoutShippingAddressModel
-        {
-            DisplayPickupInStore = !_orderSettings.DisplayPickupInStoreOnShippingMethodPage
-        };
+        model.DisplayPickupInStore = !_orderSettings.DisplayPickupInStoreOnShippingMethodPage;
 
         if (!_orderSettings.DisplayPickupInStoreOnShippingMethodPage)
             model.PickupPointsModel = await PrepareCheckoutPickupPointsModelAsync(cart);
@@ -326,7 +323,7 @@ public partial class CheckoutModelFactory : ICheckoutModelFactory
         var addresses = await (await _customerService.GetAddressesByCustomerIdAsync(customer.Id))
             .WhereAwait(async a => !a.CountryId.HasValue || await _countryService.GetCountryByAddressAsync(a) is
                 {
-                    Published: true, 
+                    Published: true,
                     AllowsShipping: true
                 } country
                 &&
@@ -359,8 +356,6 @@ public partial class CheckoutModelFactory : ICheckoutModelFactory
             overrideAttributesXml: overrideAttributesXml);
 
         model.SelectedBillingAddress = customer.BillingAddressId ?? 0;
-
-        return model;
     }
 
     /// <summary>
@@ -417,11 +412,13 @@ public partial class CheckoutModelFactory : ICheckoutModelFactory
 
             //sort shipping methods
             if (model.ShippingMethods.Count > 1)
+            {
                 model.ShippingMethods = (_shippingSettings.ShippingSorting switch
                 {
                     ShippingSortingEnum.ShippingCost => model.ShippingMethods.OrderBy(option => option.Rate),
                     _ => model.ShippingMethods.OrderBy(option => option.DisplayOrder)
                 }).ToList();
+            }
 
             //find a selected (previously) shipping method
             var selectedShippingOption = await _genericAttributeService.GetAttributeAsync<ShippingOption>(customer,
@@ -434,24 +431,63 @@ public partial class CheckoutModelFactory : ICheckoutModelFactory
                         so.Name.Equals(selectedShippingOption.Name, StringComparison.InvariantCultureIgnoreCase) &&
                         !string.IsNullOrEmpty(so.ShippingRateComputationMethodSystemName) &&
                         so.ShippingRateComputationMethodSystemName.Equals(selectedShippingOption.ShippingRateComputationMethodSystemName, StringComparison.InvariantCultureIgnoreCase));
-                if (shippingOptionToSelect != null) 
+                if (shippingOptionToSelect != null)
                     shippingOptionToSelect.Selected = true;
             }
             //if no option has been selected, let's do it for the first one
             if (model.ShippingMethods.FirstOrDefault(so => so.Selected) == null)
             {
                 var shippingOptionToSelect = model.ShippingMethods.FirstOrDefault();
-                if (shippingOptionToSelect != null) 
+                if (shippingOptionToSelect != null)
                     shippingOptionToSelect.Selected = true;
             }
 
             //notify about shipping from multiple locations
-            if (_shippingSettings.NotifyCustomerAboutShippingFromMultipleLocations) 
+            if (_shippingSettings.NotifyCustomerAboutShippingFromMultipleLocations)
                 model.NotifyCustomerAboutShippingFromMultipleLocations = getShippingOptionResponse.ShippingFromMultipleLocations;
+
+            var language = await _workContext.GetWorkingLanguageAsync();
+            foreach (var shippingMethod in model.ShippingMethods)
+            {
+                var transitDays = shippingMethod.ShippingOption.TransitDays;
+                var desiredDelivery = new DesiredDeliveryDateModel
+                {
+                    Enabled = _shippingSettings.AllowCustomerToChooseDeliveryDate && transitDays.HasValue
+                };
+
+                if (desiredDelivery.Enabled)
+                {
+                    var startDate = DateTime.UtcNow.Date.AddDays(transitDays.Value);
+
+                    // Build list of dates synchronously, convert each to user time asynchronously
+                    var dates = Enumerable.Range(0, _shippingSettings.DeliveryDateRangeDays)
+                        .Select(i => startDate.AddDays(i))
+                        .ToList();
+
+                    var availableDates = new List<SelectListItem>();
+                    foreach (var date in dates)
+                    {
+                        var userDate = await _dateTimeHelper.ConvertToUserTimeAsync(date, DateTimeKind.Utc);
+                        availableDates.Add(new SelectListItem
+                        {
+                            Value = date.ToString("yyyy-MM-dd"),
+                            Text = userDate.ToString("D")
+                        });
+                    }
+
+                    desiredDelivery.AvailableDates = availableDates;
+                    desiredDelivery.SelectedDate = desiredDelivery.AvailableDates.FirstOrDefault()?.Value ?? string.Empty;
+                }
+
+                shippingMethod.DesiredDeliveryDate = desiredDelivery;
+            }
+
         }
         else
+        {
             foreach (var error in getShippingOptionResponse.Errors)
                 model.Warnings.Add(error);
+        }
 
         return model;
     }
@@ -638,12 +674,13 @@ public partial class CheckoutModelFactory : ICheckoutModelFactory
         {
             ShippingRequired = await _shoppingCartService.ShoppingCartRequiresShippingAsync(cart),
             DisableBillingAddressCheckoutStep = _orderSettings.DisableBillingAddressCheckoutStep && (await _customerService.GetAddressesByCustomerIdAsync(customer.Id)).Any(),
-            BillingAddress = await PrepareBillingAddressModelAsync(cart, prePopulateNewAddressWithCustomerFields: true),
-            DisplayCaptcha = await _customerService.IsGuestAsync(await _customerService.GetShoppingCartCustomerAsync(cart))
-                             && _captchaSettings.Enabled && _captchaSettings.ShowOnCheckoutPageForGuests,
+            DisplayCaptcha = await _customerService.IsGuestAsync(await _customerService.GetShoppingCartCustomerAsync(cart)) && _captchaSettings.Enabled && _captchaSettings.ShowOnCheckoutPageForGuests,
             IsReCaptchaV3 = _captchaSettings.CaptchaType == CaptchaType.ReCaptchaV3,
             ReCaptchaPublicKey = _captchaSettings.ReCaptchaPublicKey
         };
+
+        await PrepareBillingAddressModelAsync(model.BillingAddress, cart, prePopulateNewAddressWithCustomerFields: true);
+
         return model;
     }
 

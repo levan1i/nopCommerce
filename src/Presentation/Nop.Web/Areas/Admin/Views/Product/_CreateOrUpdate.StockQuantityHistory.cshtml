@@ -18,7 +18,7 @@
         <div class="form-group row">
             <div class="col-md-9 offset-md-3">
                 <button type="button" id="search-stock-quantity-history" class="btn btn-primary btn-search">
-                    <i class="fas fa-search"></i>
+                    <i class="fas fa-magnifying-glass"></i>
                     @T("Admin.Common.Search")
                 </button>
             </div>
@@ -40,13 +40,11 @@
         {
             new ColumnProperty(nameof(StockQuantityHistoryModel.WarehouseName))
             {
-                Title = T("Admin.Catalog.Products.StockQuantityHistory.Fields.Warehouse").Text,
-                Width = "150"
+                Title = T("Admin.Catalog.Products.StockQuantityHistory.Fields.Warehouse").Text
             },
             new ColumnProperty(nameof(StockQuantityHistoryModel.AttributeCombination))
             {
                 Title = T("Admin.Catalog.Products.StockQuantityHistory.Fields.Combination").Text,
-                Width = "180",
                 Encode = false
             },
             new ColumnProperty(nameof(StockQuantityHistoryModel.QuantityAdjustment))
@@ -57,8 +55,7 @@
             },
             new ColumnProperty(nameof(StockQuantityHistoryModel.StockQuantity))
             {
-                Title = T("Admin.Catalog.Products.StockQuantityHistory.Fields.StockQuantity").Text,
-                Width = "130"
+                Title = T("Admin.Catalog.Products.StockQuantityHistory.Fields.StockQuantity").Text
             },
             new ColumnProperty(nameof(StockQuantityHistoryModel.Message))
             {
@@ -67,7 +64,7 @@
             new ColumnProperty(nameof(StockQuantityHistoryModel.CreatedOn))
             {
                 Title = T("Admin.Catalog.Products.StockQuantityHistory.Fields.CreatedOn").Text,
-                Width = "170",
+                Width = "180",
                 Render = new RenderDate()
             }
         }

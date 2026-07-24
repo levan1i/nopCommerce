@@ -30,7 +30,7 @@ export default function copyDependencies()
     //datatables.net
     gulp
       .src(nodeModules + '{datatables.net,datatables.net-bs4,datatables.net-buttons,datatables.net-buttons-bs4}/**')
-      .pipe(filter(['**/{css,js}/*.min*', '**/swf/*']))
+      .pipe(filter(['**/{css,js}/*.min*', '**/swf/*']))      
       .pipe(gulp.dest(targetPath)),
 
     //CLDR (unicode.org)
@@ -56,30 +56,25 @@ export default function copyDependencies()
       .src(`${nodeModules}ionicons/{css,fonts,png}/**`)
       .pipe(gulp.dest(targetPath + '/ionicons')),
 
-    //Tiny MCE
+    //Summernote
     gulp
-      .src(`${nodeModules}tinymce/**/*.min.*`)
-      .pipe(gulp.dest(targetPath + '/tinymce')),
+      .src(`${nodeModules}summernote/dist/{lang,font}/**`)
+        .pipe(gulp.dest(targetPath + '/summernote')),
 
+    //elFinder
     gulp
-      .src(nodeModules + 'tinymce-langs/langs/*')
-      .pipe(gulp.dest(targetPath + '/tinymce/langs')),
+      .src(`${nodeModules}elfinder-npm/{css,img,js,sounds}/**`)
+      .pipe(gulp.dest(targetPath + '/elfinder')),
 
     //OverlayScrollbars
     gulp
-      .src(`${nodeModules}overlayscrollbars/**`)
-      .pipe(filter('**/{css,js}/*.min*'))
+      .src(`${nodeModules}overlayscrollbars/**/*.min.*`)
       .pipe(gulp.dest(`${targetPath}overlayscrollbars`)),
 
     //Swiper
     gulp
       .src(nodeModules + 'swiper/swiper-bundle.min.{css,js,js.map}')
       .pipe(gulp.dest(targetPath + '/swiper')),
-
-    //Shepherd.js
-    gulp
-      .src(nodeModules + 'shepherd.js/dist/**/shepherd.{css,min.js}')
-      .pipe(gulp.dest(targetPath + '/shepherd.js')),
 
     //JsRender
     gulp
@@ -137,5 +132,12 @@ export default function copyDependencies()
       .src(nodeModules + 'jquery-migrate/dist/*.{js,js.map}')
       .pipe(gulp.dest(`${targetPath}jquery-migrate`)),
 
+    //driver.js
+    gulp
+      .src(nodeModules + 'driver.js/dist/*.{css,iife.js}')
+      .pipe(rename({
+        suffix: '.min' //avoid minification
+      }))
+      .pipe(gulp.dest(`${targetPath}driver.js`)),
     ]);
 }

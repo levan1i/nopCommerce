@@ -67,7 +67,8 @@ public partial class DiscountService : IDiscountService
     /// <summary>
     /// Get discount validation result
     /// </summary>
-    /// <param name="requirements">Collection of discount requirement</param>
+    /// <param name="requirementsToValidate">Collection of discount requirement to validate rules</param>
+    /// <param name="allRequirements">Collection of all discount requirement related to discount</param>
     /// <param name="groupInteractionType">Interaction type within the group of requirements</param>
     /// <param name="customer">Customer</param>
     /// <param name="errors">Errors</param>
@@ -75,24 +76,24 @@ public partial class DiscountService : IDiscountService
     /// A task that represents the asynchronous operation
     /// The task result contains true if result is valid; otherwise false
     /// </returns>
-    protected virtual async Task<bool> GetValidationResultAsync(IList<DiscountRequirement> requirements,
+    protected virtual async Task<bool> GetValidationResultAsync(IList<DiscountRequirement> requirementsToValidate, IList<DiscountRequirement> allRequirements,
         RequirementGroupInteractionType groupInteractionType, Customer customer, List<string> errors)
     {
         var result = false;
 
-        var requirementsForCheck = requirements.Any(r => !r.ParentId.HasValue)
-            ? requirements.Where(r => !r.ParentId.HasValue)
-            : requirements;
+        var requirementsForCheck = requirementsToValidate.Any(r => !r.ParentId.HasValue)
+            ? requirementsToValidate.Where(r => !r.ParentId.HasValue)
+            : requirementsToValidate;
 
         foreach (var requirement in requirementsForCheck)
         {
             if (requirement.IsGroup)
             {
-                var childRequirements = requirements.Where(r => r.ParentId == requirement.Id).ToList();
+                var childRequirements = allRequirements.Where(r => r.ParentId == requirement.Id).ToList();
 
                 //get child requirements for the group
                 var interactionType = requirement.InteractionType ?? RequirementGroupInteractionType.And;
-                result = await GetValidationResultAsync(childRequirements, interactionType, customer, errors);
+                result = await GetValidationResultAsync(childRequirements, allRequirements, interactionType, customer, errors);
             }
             else
             {
@@ -178,13 +179,14 @@ public partial class DiscountService : IDiscountService
     /// <param name="startDateUtc">Discount start date; pass null to load all records</param>
     /// <param name="endDateUtc">Discount end date; pass null to load all records</param>
     /// <param name="isActive">A value indicating whether to get active discounts; "null" to load all discounts; "false" to load only inactive discounts; "true" to load only active discounts</param>
+    /// <param name="vendorId">Vendor identifier; 0 to load all records</param>
     /// <returns>
     /// A task that represents the asynchronous operation
     /// The task result contains the discounts
     /// </returns>
     public virtual async Task<IList<Discount>> GetAllDiscountsAsync(DiscountType? discountType = null,
         string couponCode = null, string discountName = null, bool showHidden = false,
-        DateTime? startDateUtc = null, DateTime? endDateUtc = null, bool? isActive = true)
+        DateTime? startDateUtc = null, DateTime? endDateUtc = null, bool? isActive = true, int vendorId = 0)
     {
         //we load all discounts, and filter them using "discountType" and dates later (in memory)
         //we do it because we know that this method is invoked several times per HTTP request with distinct "discountType" parameter and date filters
@@ -215,18 +217,28 @@ public partial class DiscountService : IDiscountService
 
         //filter by dates
         if (!showHidden)
+        {
             discounts = discounts.Where(discount =>
                 (!discount.StartDateUtc.HasValue || discount.StartDateUtc <= DateTime.UtcNow) &&
                 (!discount.EndDateUtc.HasValue || discount.EndDateUtc >= DateTime.UtcNow));
+        }
 
         if (startDateUtc.HasValue)
+        {
             discounts = discounts.Where(discount =>
                 !discount.StartDateUtc.HasValue || discount.StartDateUtc >= startDateUtc.Value);
+        }
+
         if (endDateUtc.HasValue)
+        {
             discounts = discounts.Where(discount =>
                 !discount.EndDateUtc.HasValue || discount.EndDateUtc <= endDateUtc.Value);
+        }
 
-        return discounts.ToList();
+        if (vendorId > 0)
+            discounts = discounts.Where(discount => discount.VendorId == vendorId);
+
+        return await discounts.ToListAsync();
     }
 
     /// <summary>
@@ -435,8 +447,10 @@ public partial class DiscountService : IDiscountService
         ArgumentNullException.ThrowIfNull(discountRequirement);
 
         if (recursive && await GetDiscountRequirementsByParentAsync(discountRequirement) is IList<DiscountRequirement> children && children.Any())
+        {
             foreach (var child in children)
                 await DeleteDiscountRequirementAsync(child, true);
+        }
 
         await _discountRequirementRepository.DeleteAsync(discountRequirement);
     }
@@ -593,7 +607,7 @@ public partial class DiscountService : IDiscountService
         //requirements exist, let's check them
         var errors = new List<string>();
 
-        result.IsValid = await GetValidationResultAsync(requirements, topLevelGroup.InteractionType.Value, customer, errors);
+        result.IsValid = await GetValidationResultAsync(requirements, requirements, topLevelGroup.InteractionType.Value, customer, errors);
 
         //set errors if result is not valid
         if (!result.IsValid)
@@ -643,10 +657,12 @@ public partial class DiscountService : IDiscountService
 
             //filter by customer
             if (customerId.HasValue && customerId.Value > 0)
+            {
                 query = from duh in query
                     join order in _orderRepository.Table on duh.OrderId equals order.Id
                     where order.CustomerId == customerId
                     select duh;
+            }
 
             //filter by order
             if (orderId.HasValue && orderId.Value > 0)

@@ -29,7 +29,7 @@
                 <div class="card-body">
                     <div class="row search-row @(!hideSearchBlock ? "opened" : "")" data-hideAttribute="@hideSearchBlockAttributeName">
                         <div class="search-text">@T("Admin.Common.Search")</div>
-                        <div class="icon-search"><i class="fas fa-search" aria-hidden="true"></i></div>
+                        <div class="icon-search"><i class="fas fa-magnifying-glass" aria-hidden="true"></i></div>
                         <div class="icon-collapse"><i class="far fa-angle-@(!hideSearchBlock ? "up" : "down")" aria-hidden="true"></i></div>
                     </div>
 
@@ -76,7 +76,7 @@
                         <div class="row">
                             <div class="text-center col-12">
                                 <button type="button" id="search-returnrequests" class="btn btn-primary btn-search">
-                                    <i class="fas fa-search"></i>
+                                    <i class="fas fa-magnifying-glass"></i>
                                     @T("Admin.Common.Search")
                                 </button>
                             </div>
@@ -120,13 +120,11 @@
                             },
                             new ColumnProperty(nameof(ReturnRequestModel.Quantity))
                             {
-                                Title = T("Admin.ReturnRequests.Fields.Quantity").Text,
-                                Width = "100"
+                                Title = T("Admin.ReturnRequests.Fields.Quantity").Text
                             },
                             new ColumnProperty(nameof(ReturnRequestModel.ReturnedQuantity))
                             {
-                                Title = T("Admin.ReturnRequests.Fields.ReturnedQuantity").Text,
-                                Width = "100"
+                                Title = T("Admin.ReturnRequests.Fields.ReturnedQuantity").Text
                             },
                             new ColumnProperty(nameof(ReturnRequestModel.CustomerId))
                             {
@@ -143,13 +141,12 @@
                             },
                             new ColumnProperty(nameof(ReturnRequestModel.ReturnRequestStatusStr))
                             {
-                                Title = T("Admin.ReturnRequests.Fields.Status").Text,
-                                Width = "200"
+                                Title = T("Admin.ReturnRequests.Fields.Status").Text
                             },
                             new ColumnProperty(nameof(ReturnRequestModel.CreatedOn))
                             {
                                 Title = T("Admin.ReturnRequests.Fields.CreatedOn").Text,
-                                Width = "100",
+                                Width = "180",
                                 Render = new RenderDate()
                             },
                             new ColumnProperty(nameof(ReturnRequestModel.Id))
@@ -157,7 +154,7 @@
                                 Title = T("Admin.Common.Edit").Text,
                                 Width = "100",
                                 ClassName =  NopColumnClassDefaults.Button,
-                                Render = new RenderButtonEdit(new DataUrl("Edit"))
+                                Render = new RenderButtonEdit(new DataUrl("~/Admin/ReturnRequest/Edit"))
                             }
                         }
                     })

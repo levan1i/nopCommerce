@@ -1,13 +1,11 @@
 ﻿using FluentMigrator;
-using Nop.Core.Infrastructure;
 using Nop.Data;
 using Nop.Data.Migrations;
-using Nop.Services.Localization;
 using Nop.Web.Framework.Extensions;
 
 namespace Nop.Web.Framework.Migrations.UpgradeTo480;
 
-[NopUpdateMigration("2024-05-15 00:00:00", "4.80", UpdateMigrationType.Localization)]
+[NopUpdateMigration("2024-08-01 00:00:01", "4.80", UpdateMigrationType.Localization)]
 public class LocalizationMigration : MigrationBase
 {
     /// <summary>Collect the UP migration expressions</summary>
@@ -16,14 +14,9 @@ public class LocalizationMigration : MigrationBase
         if (!DataSettingsManager.IsDatabaseInstalled())
             return;
 
-        //do not use DI, because it produces exception on the installation process
-        var localizationService = EngineContext.Current.Resolve<ILocalizationService>();
-
-        var (languageId, _) = this.GetLanguageData();
-
         #region Delete locales
 
-        localizationService.DeleteLocaleResources(new List<string>
+        this.DeleteLocaleResources(new List<string>
         {
             //#6977
             "Common.FileUploader.Upload",
@@ -104,6 +97,11 @@ public class LocalizationMigration : MigrationBase
             "Permission.OrderCountryReport",
             "Permission.PublicStoreAllowNavigation",
             "Permission.SalesSummaryReport",
+            "Admin.ConfigurationSteps.PaymentPayPal.SignUp.Title",
+            "Admin.ConfigurationSteps.PaymentPayPal.SignUp.Text",
+            "Admin.ConfigurationSteps.PaymentPayPal.Register.Text2",
+            //#7590
+            "Checkout.RedirectMessage"
         });
 
         #endregion
@@ -114,21 +112,21 @@ public class LocalizationMigration : MigrationBase
 
         #region Add or update locales
 
-        localizationService.AddOrUpdateLocaleResource(new Dictionary<string, string>
+        this.AddOrUpdateLocaleResource(new Dictionary<string, string>
         {
             //#6977
             ["Common.FileUploader.Browse"] = "Browse",
-            ["Common.FileUploader.Processing"] = "Uploading...", 
+            ["Common.FileUploader.Processing"] = "Uploading...",
 
             //#7089
             ["Admin.ContentManagement.MessageTemplates.List.SearchEmailAccount"] = "Email account",
             ["Admin.ContentManagement.MessageTemplates.List.SearchEmailAccount.All"] = "All",
 
             //#7108
-            ["Admin.ContentManagement.MessageTemplates.Description.OrderCancelled.VendorNotification"] = "This message template is used to notify a vendor that the certain order was cancelled.The order can be cancelled by a customer on the account page or by store owner in Customers - Customers in Orders tab or in Sales - Orders.",
+            ["Admin.ContentManagement.MessageTemplates.Description.OrderCancelled.VendorNotification"] = "This message template is used to notify a vendor that the certain order was cancelled. The order can be cancelled by a customer on the account page or by store owner in Customers - Customers in Orders tab or in Sales - Orders.",
 
             //#7215
-            ["Admin.Catalog.Products.Fields.DisplayAttributeCombinationImagesOnly.Hint"] = "You may choose pictures associated to each product attribute value or attribute combination (these pictures will replace the main product image when this product attribute value or attribute combination is selected). Enable this option if you want to display only images of a chosen product attribute value or a attribute combination (other pictures will be hidden). Otherwise, all uploaded pictures will be displayed on the product details page",
+            ["Admin.Catalog.Products.Fields.DisplayAttributeCombinationImagesOnly.Hint"] = "You may choose pictures associated to each product attribute value or attribute combination (these pictures will replace the main product image when this product attribute value or attribute combination is selected). Enable this option if you want to display only images of a chosen product attribute value or an attribute combination (other pictures will be hidden). Otherwise, all uploaded pictures will be displayed on the product details page",
 
             //#7208
             ["Admin.Customers.Customers.List.SearchIsActive"] = "Is active",
@@ -247,7 +245,78 @@ public class LocalizationMigration : MigrationBase
             ["Security.Permission.System.ManageMessageQueue"] = "Admin area. Message Queue. Manage",
             ["Security.Permission.System.ManageScheduleTasks"] = "Admin area. Schedule Tasks. Manage",
             ["Security.Permission.System.ManageSystemLog"] = "Admin area. System Log. Manage",
-        }, languageId);
+
+            //#7242
+            ["Admin.Catalog.Categories.Fields.RestrictFromVendors"] = "Restrict from vendors",
+            ["Admin.Catalog.Categories.Fields.RestrictFromVendors.Hint"] = "Check to restrict vendors from adding products to this category. This option is useful when you have multi-vendors enabled in your store.",
+
+            //#7281
+            ["Account.ChangePassword.MustBeChanged"] = "Your password must be changed for security purposes.",
+            ["Admin.Customers.Customers.Fields.MustChangePassword"] = "Customer must change password",
+            ["Admin.Customers.Customers.Fields.MustChangePassword.Hint"] = "Check to require the customer to change their password.",
+
+            //#7318
+            ["ShoppingCart.GiftCardCouponCode.DontWorkWithGiftCards"] = "You cannot use gift cards with other gift cards.",
+            //#7265
+            ["Admin.Configuration.Settings.Tax.EuVatRequired"] = "VAT number required",
+            ["Admin.Configuration.Settings.Tax.EuVatRequired.Hint"] = "Check if 'EU VAT number' is required.",
+            ["Account.Fields.VatNumber.Required"] = "VAT number is required",
+            //#7375
+            ["Admin.Configuration.Settings.CustomerUser.PasswordMaxLength.GreaterThanOrEqualMinLength"] = "Password maximum length must be greater than or equal to minimum length",
+            ["Admin.Configuration.Settings.CustomerUser.PasswordMinLength.GreaterThanZero"] = "Password minimum length must be greater than 0",
+
+            //#5898
+            ["Admin.ContentManagement.MessageTemplates.Description.QuantityBelow.VendorNotification"] = "This message template is used to notify a vendor that the certain product is getting low stock. You can set up the minimum product quantity when creating or editing the product in Inventory section, <strong>Minimum stock qty field</strong>.",
+            ["Admin.ContentManagement.MessageTemplates.Description.QuantityBelow.AttributeCombination.VendorNotification"] = "This message template is used to notify a vendor that the certain product attribute combination is getting low stock. You can set up the combination minimum quantity when creating or editing the product in Product attribute tab - Attributes combinations tab in Notify admin for quantity below field.",
+
+            //#7299
+            ["Admin.Catalog.Products.Multimedia.Videos.Description"] = "How to embed a video: Find your video in your library (on any video hosting) and select it to open the video settings page. Select the privacy icon from your \"Share\" button. Click on \"Embed\" from the window that opens up. You can copy the <strong>src</strong> from the embed option and use it.",
+
+            //4306
+            ["Admin.Configuration.Settings.Catalog.ShowSearchBoxCategories"] = "Show product categories for the search box",
+            ["Admin.Configuration.Settings.Catalog.ShowSearchBoxCategories.Hint"] = "Check to display the drop-down list with product categories next to the search box.",
+            ["Search.SearchBox.AllCategories"] = "All categories",
+
+            //#7241
+            ["Admin.Promotions.Discounts.Fields.Vendor"] = "Vendor",
+            ["Admin.Promotions.Discounts.Fields.Vendor.Hint"] = "Choose a vendor associated with this discount. The associated vendor will have the ability to manage this discount.",
+            ["Admin.Promotions.Discounts.Fields.Vendor.None"] = "No vendor",
+            ["Admin.Promotions.Discounts.List.SearchVendor"] = "Vendor",
+            ["Admin.Promotions.Discounts.List.SearchVendor.Hint"] = "Search by a specific vendor.",
+            //#2388
+            ["Admin.Configuration.Settings.Catalog.ExportImportTierPrices"] = "Export/Import products with tier prices",
+            ["Admin.Configuration.Settings.Catalog.ExportImportTierPrices.Hint"] = "Check if products should be exported/imported with tier prices.",
+
+            //#7228
+            ["Admin.Catalog.Products.BulkEdit"] = "Bulk edit products",
+            ["Admin.Catalog.Products.BulkEdit.SaveSelected"] = "Save selected",
+            ["Admin.Catalog.Products.BulkEdit.SaveAll"] = "Save all",
+
+            //#7243
+            ["Admin.Vendors.PmCustomer.Choose"] = "Choose",
+            ["Admin.Vendors.Fields.PmCustomerId"] = "Customer for PM",
+            ["Admin.Vendors.Fields.PmCustomerId.Hint"] = "Choose the customer for receiving private messages. Customers will see the \"Send private message\" button on the vendor details page.",
+            ["Admin.Vendors.Fields.PmCustomerId.Choose"] = "Choose",
+            ["Admin.Vendors.Fields.PmCustomerId.Remove"] = "Remove",
+            ["SendPmToVendor"] = "Send private message",
+
+            //#7244
+            ["Vendors.ExistingReviews"] = "Existing reviews",
+            ["Vendors.Reviews.All"] = "View all",
+            ["Vendors.Reviews.BackTo"] = "Back to {0}",
+            ["PageTitle.VendorReviews"] = "Reviews of the vendor's products",
+
+            ["Admin.ConfigurationSteps.PaymentMethods.Configure.Title"] = "Configure a payment method",
+            ["Admin.ConfigurationSteps.PaymentMethods.Configure.Text"] = "You can configure each payment method by clicking the appropriate <b>Configure</b> button.",
+
+            ["Admin.ConfigurationSteps.PaymentMethods.PayPalCommerce.Configure.Text"] = "Now we’ll configure the PayPal Commerce payment method.",
+            ["Admin.ConfigurationSteps.PaymentMethods.PayPalCommerce.Configure.Title"] = "Configure PayPal Commerce",
+            ["Admin.ConfigurationSteps.PaymentPayPal.Register.Text"] = "Click this button to register an account. You need to go through a few steps to fill in all the required data. The last step will be to verify your email address to activate your account.",
+            ["Admin.ConfigurationSteps.PaymentPayPal.Credentials.Text"] = "After you create and set up your application in your <b>PayPal</b> account, you need to copy the <b>Client ID</b>, <b>Secret</b> and <b>Merchant ID</b>, and paste them into these fields.",
+
+            //#7618
+            ["Admin.Orders.Address.CustomAttributes"] = "Custom Attributes",
+        });
 
         #endregion
     }

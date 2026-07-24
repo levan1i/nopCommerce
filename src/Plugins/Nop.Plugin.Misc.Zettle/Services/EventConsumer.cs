@@ -3,6 +3,9 @@ using Nop.Core.Events;
 using Nop.Plugin.Misc.Zettle.Domain;
 using Nop.Services.Catalog;
 using Nop.Services.Events;
+using Nop.Services.Plugins;
+using Nop.Services.Security;
+using Nop.Web.Framework.Events;
 
 namespace Nop.Plugin.Misc.Zettle.Services;
 
@@ -10,6 +13,7 @@ namespace Nop.Plugin.Misc.Zettle.Services;
 /// Represents plugin event consumer
 /// </summary>
 public class EventConsumer :
+    BaseAdminMenuCreatedEventConsumer,
     IConsumer<EntityInsertedEvent<Product>>,
     IConsumer<EntityUpdatedEvent<Product>>,
     IConsumer<EntityDeletedEvent<Product>>,
@@ -33,6 +37,7 @@ public class EventConsumer :
     #region Fields
 
     protected readonly ICategoryService _categoryService;
+    protected readonly IPermissionService _permissionService;
     protected readonly IProductAttributeParser _productAttributeParser;
     protected readonly IProductAttributeService _productAttributeService;
     protected readonly IProductService _productService;
@@ -45,20 +50,40 @@ public class EventConsumer :
     #region Ctor
 
     public EventConsumer(ICategoryService categoryService,
+        IPermissionService permissionService,
+        IPluginManager<IPlugin> pluginManager,
         IProductAttributeParser productAttributeParser,
         IProductAttributeService productAttributeService,
         IProductService productService,
         ZettleRecordService zettleRecordService,
         ZettleService zettleService,
-        ZettleSettings zettleSettings)
+        ZettleSettings zettleSettings) :
+        base(pluginManager)
     {
         _categoryService = categoryService;
+        _permissionService = permissionService;
         _productAttributeParser = productAttributeParser;
         _productAttributeService = productAttributeService;
         _productService = productService;
         _zettleRecordService = zettleRecordService;
         _zettleService = zettleService;
         _zettleSettings = zettleSettings;
+    }
+
+    #endregion
+
+    #region Utilities
+
+    /// <summary>
+    /// Checks is the current customer has rights to access this menu item
+    /// </summary>
+    /// <returns>
+    /// A task that represents the asynchronous operation
+    /// The task result contains the true if access is granted, otherwise false
+    /// </returns>
+    protected override async Task<bool> CheckAccessAsync()
+    {
+        return await _permissionService.AuthorizeAsync(StandardPermission.Configuration.MANAGE_PLUGINS);
     }
 
     #endregion
@@ -101,9 +126,7 @@ public class EventConsumer :
             await _zettleRecordService.CreateOrUpdateRecordAsync(OperationType.Delete, eventMessage.Entity.Id);
             var combinations = await _productAttributeService.GetAllProductAttributeCombinationsAsync(eventMessage.Entity.Id);
             foreach (var combination in combinations)
-            {
                 await _zettleRecordService.CreateOrUpdateRecordAsync(OperationType.Delete, combination.ProductId, combination.Id);
-            }
         }
     }
 
@@ -123,9 +146,7 @@ public class EventConsumer :
         await _zettleRecordService.CreateOrUpdateRecordAsync(OperationType.Delete, eventMessage.Entity.Id);
         var combinations = await _productAttributeService.GetAllProductAttributeCombinationsAsync(eventMessage.Entity.Id);
         foreach (var combination in combinations)
-        {
             await _zettleRecordService.CreateOrUpdateRecordAsync(OperationType.Delete, combination.ProductId, combination.Id);
-        }
     }
 
     /// <summary>
@@ -184,9 +205,7 @@ public class EventConsumer :
 
         var mappings = await _categoryService.GetProductCategoriesByCategoryIdAsync(eventMessage.Entity.Id, showHidden: true);
         foreach (var mapping in mappings)
-        {
             await _zettleRecordService.CreateOrUpdateRecordAsync(OperationType.Update, mapping.ProductId);
-        }
     }
 
     /// <summary>
@@ -207,9 +226,7 @@ public class EventConsumer :
 
         var mappings = await _categoryService.GetProductCategoriesByCategoryIdAsync(eventMessage.Entity.Id, showHidden: true);
         foreach (var mapping in mappings)
-        {
             await _zettleRecordService.CreateOrUpdateRecordAsync(OperationType.Update, mapping.ProductId);
-        }
     }
 
     /// <summary>
@@ -283,9 +300,7 @@ public class EventConsumer :
             await _zettleRecordService.CreateOrUpdateRecordAsync(OperationType.Update, product.Id);
             var combinations = await _productAttributeService.GetAllProductAttributeCombinationsAsync(product.Id);
             foreach (var combination in combinations)
-            {
                 await _zettleRecordService.CreateOrUpdateRecordAsync(OperationType.Update, combination.ProductId, combination.Id);
-            }
         }
     }
 
@@ -338,9 +353,7 @@ public class EventConsumer :
         await _zettleRecordService.CreateOrUpdateRecordAsync(OperationType.Update, mapping.ProductId);
         var combinations = await _productAttributeService.GetAllProductAttributeCombinationsAsync(mapping.ProductId);
         foreach (var combination in combinations)
-        {
             await _zettleRecordService.CreateOrUpdateRecordAsync(OperationType.Update, combination.ProductId, combination.Id);
-        }
     }
 
     /// <summary>
@@ -363,9 +376,7 @@ public class EventConsumer :
         await _zettleRecordService.CreateOrUpdateRecordAsync(OperationType.Update, mapping.ProductId);
         var combinations = await _productAttributeService.GetAllProductAttributeCombinationsAsync(mapping.ProductId);
         foreach (var combination in combinations)
-        {
             await _zettleRecordService.CreateOrUpdateRecordAsync(OperationType.Update, combination.ProductId, combination.Id);
-        }
     }
 
     /// <summary>
@@ -385,9 +396,7 @@ public class EventConsumer :
         await _zettleRecordService.CreateOrUpdateRecordAsync(OperationType.Create, eventMessage.Entity.ProductId, eventMessage.Entity.Id);
         var combinations = await _productAttributeService.GetAllProductAttributeCombinationsAsync(eventMessage.Entity.ProductId);
         foreach (var combination in combinations)
-        {
             await _zettleRecordService.CreateOrUpdateRecordAsync(OperationType.Update, combination.ProductId, combination.Id);
-        }
     }
 
     /// <summary>
@@ -406,9 +415,7 @@ public class EventConsumer :
         await _zettleRecordService.CreateOrUpdateRecordAsync(OperationType.Update, eventMessage.Entity.ProductId);
         var combinations = await _productAttributeService.GetAllProductAttributeCombinationsAsync(eventMessage.Entity.ProductId);
         foreach (var combination in combinations)
-        {
             await _zettleRecordService.CreateOrUpdateRecordAsync(OperationType.Update, combination.ProductId, combination.Id);
-        }
     }
 
     /// <summary>
@@ -428,9 +435,7 @@ public class EventConsumer :
         await _zettleRecordService.CreateOrUpdateRecordAsync(OperationType.Delete, eventMessage.Entity.ProductId, eventMessage.Entity.Id);
         var combinations = await _productAttributeService.GetAllProductAttributeCombinationsAsync(eventMessage.Entity.ProductId);
         foreach (var combination in combinations)
-        {
             await _zettleRecordService.CreateOrUpdateRecordAsync(OperationType.Update, combination.ProductId, combination.Id);
-        }
     }
 
     /// <summary>
@@ -455,6 +460,25 @@ public class EventConsumer :
         await _zettleService.ChangeInventoryBalanceAsync(eventMessage.Entity.ProductId,
             eventMessage.Entity.CombinationId ?? 0, eventMessage.Entity.QuantityAdjustment);
     }
+
+    #endregion
+
+    #region Properties
+
+    /// <summary>
+    /// Gets the plugin system name
+    /// </summary>
+    protected override string PluginSystemName => ZettleDefaults.SystemName;
+
+    /// <summary>
+    /// Menu item insertion type
+    /// </summary>
+    protected override MenuItemInsertType InsertType => MenuItemInsertType.After;
+
+    /// <summary>
+    /// The system name of the menu item after with need to insert the current one
+    /// </summary>
+    protected override string AfterMenuSystemName => "Shipping";
 
     #endregion
 }

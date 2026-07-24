@@ -16,7 +16,7 @@ public partial class NopRoutingStartup : INopStartup
     /// </summary>
     /// <param name="services">Collection of service descriptors</param>
     /// <param name="configuration">Configuration of the application</param>
-    public void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+    public virtual void ConfigureServices(IServiceCollection services, IConfiguration configuration)
     {
     }
 
@@ -24,13 +24,13 @@ public partial class NopRoutingStartup : INopStartup
     /// Configure the using of added middleware
     /// </summary>
     /// <param name="application">Builder for configuring an application's request pipeline</param>
-    public void Configure(IApplicationBuilder application)
+    public virtual void Configure(IApplicationBuilder application)
     {
-        //Add the RoutingMiddleware
+        //add the RoutingMiddleware
         application.UseRouting();
 
-        var settings = Singleton<AppSettings>.Instance.Get<CommonConfig>();
-        if (settings.PermitLimit > 0)
+        var commonConfig = Singleton<AppSettings>.Instance.Get<CommonConfig>();
+        if (commonConfig.PermitLimit > 0)
             application.UseRateLimiter();
     }
 

@@ -1,10 +1,5 @@
-﻿using System.Net;
-using System.Reflection;
-using System.Threading.RateLimiting;
-using Azure.Identity;
-using Azure.Storage.Blobs;
+﻿using System.Threading.RateLimiting;
 using FluentValidation;
-using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -14,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Newtonsoft.Json.Serialization;
 using Nop.Core;
 using Nop.Core.Configuration;
@@ -22,9 +18,11 @@ using Nop.Core.Http;
 using Nop.Core.Infrastructure;
 using Nop.Core.Security;
 using Nop.Data;
+using Nop.Services.ArtificialIntelligence;
 using Nop.Services.Authentication;
 using Nop.Services.Authentication.External;
 using Nop.Services.Common;
+using Nop.Web.Framework.ClientsideFluentValidation;
 using Nop.Web.Framework.Mvc.ModelBinding;
 using Nop.Web.Framework.Mvc.ModelBinding.Binders;
 using Nop.Web.Framework.Mvc.Routing;
@@ -32,7 +30,7 @@ using Nop.Web.Framework.Security.Captcha;
 using Nop.Web.Framework.Themes;
 using Nop.Web.Framework.Validators;
 using Nop.Web.Framework.WebOptimizer;
-using WebMarkupMin.AspNetCore8;
+using WebMarkupMin.AspNetCoreLatest;
 using WebMarkupMin.Core;
 using WebMarkupMin.NUglify;
 
@@ -51,10 +49,6 @@ public static class ServiceCollectionExtensions
     public static void ConfigureApplicationSettings(this IServiceCollection services,
         WebApplicationBuilder builder)
     {
-        //let the operating system decide what TLS protocol version to use
-        //see https://docs.microsoft.com/dotnet/framework/network-programming/tls
-        ServicePointManager.SecurityProtocol = SecurityProtocolType.SystemDefault;
-
         //create default file provider
         CommonHelper.DefaultFileProvider = new NopFileProvider(builder.Environment);
 
@@ -247,32 +241,11 @@ public static class ServiceCollectionExtensions
     /// <param name="services">Collection of service descriptors</param>
     public static void AddNopDataProtection(this IServiceCollection services)
     {
-        var appSettings = Singleton<AppSettings>.Instance;
-        if (appSettings.Get<AzureBlobConfig>().Enabled && appSettings.Get<AzureBlobConfig>().StoreDataProtectionKeys)
-        {
-            var blobServiceClient = new BlobServiceClient(appSettings.Get<AzureBlobConfig>().ConnectionString);
-            var blobContainerClient = blobServiceClient.GetBlobContainerClient(appSettings.Get<AzureBlobConfig>().DataProtectionKeysContainerName);
-            var blobClient = blobContainerClient.GetBlobClient(NopDataProtectionDefaults.AzureDataProtectionKeyFile);
+        var dataProtectionKeysPath = CommonHelper.DefaultFileProvider.MapPath(NopDataProtectionDefaults.DataProtectionKeysPath);
+        var dataProtectionKeysFolder = new System.IO.DirectoryInfo(dataProtectionKeysPath);
 
-            var dataProtectionBuilder = services.AddDataProtection().PersistKeysToAzureBlobStorage(blobClient);
-
-            if (!appSettings.Get<AzureBlobConfig>().DataProtectionKeysEncryptWithVault)
-                return;
-
-            var keyIdentifier = appSettings.Get<AzureBlobConfig>().DataProtectionKeysVaultId;
-            var credentialOptions = new DefaultAzureCredentialOptions();
-            var tokenCredential = new DefaultAzureCredential(credentialOptions);
-
-            dataProtectionBuilder.ProtectKeysWithAzureKeyVault(new Uri(keyIdentifier), tokenCredential);
-        }
-        else
-        {
-            var dataProtectionKeysPath = CommonHelper.DefaultFileProvider.MapPath(NopDataProtectionDefaults.DataProtectionKeysPath);
-            var dataProtectionKeysFolder = new System.IO.DirectoryInfo(dataProtectionKeysPath);
-
-            //configure the data protection system to persist keys to the specified directory
-            services.AddDataProtection().PersistKeysToFileSystem(dataProtectionKeysFolder);
-        }
+        //configure the data protection system to persist keys to the specified directory
+        services.AddDataProtection().PersistKeysToFileSystem(dataProtectionKeysFolder);
     }
 
     /// <summary>
@@ -297,6 +270,7 @@ public static class ServiceCollectionExtensions
             options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
             options.LoginPath = NopAuthenticationDefaults.LoginPath;
             options.AccessDeniedPath = NopAuthenticationDefaults.AccessDeniedPath;
+            options.ReturnUrlParameter = NopAuthenticationDefaults.ReturnUrlParameter;
         });
 
         //add external authentication
@@ -307,6 +281,7 @@ public static class ServiceCollectionExtensions
             options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
             options.LoginPath = NopAuthenticationDefaults.LoginPath;
             options.AccessDeniedPath = NopAuthenticationDefaults.AccessDeniedPath;
+            options.ReturnUrlParameter = NopAuthenticationDefaults.ReturnUrlParameter;
         });
 
         //register and configure external authentication plugins now
@@ -355,9 +330,7 @@ public static class ServiceCollectionExtensions
         //set some options
         mvcBuilder.AddMvcOptions(options =>
         {
-            options.ModelBinderProviders.Insert(1, new NopModelBinderProvider());
-            //add custom display metadata provider 
-            options.ModelMetadataDetailsProviders.Add(new NopMetadataProvider());
+            options.ModelBinderProviders.Insert(0, new NopModelBinderProvider());
 
             //in .NET model binding for a non-nullable property may fail with an error message "The value '' is invalid"
             //here we set the locale name as the message, we'll replace it with the actual one later when not-null validation failed
@@ -365,7 +338,8 @@ public static class ServiceCollectionExtensions
         });
 
         //add fluent validation
-        services.AddFluentValidationAutoValidation().AddFluentValidationClientsideAdapters();
+        services.TryAddSingleton(ValidatorOptions.Global);
+        mvcBuilder.AddViewOptions(options => options.ClientModelValidatorProviders.Add(new NopClientModelValidatorProvider()));
 
         //register all available validators from Nop assemblies
         var assemblies = mvcBuilder.PartManager.ApplicationParts
@@ -388,6 +362,7 @@ public static class ServiceCollectionExtensions
     {
         //we use custom redirect executor as a workaround to allow using non-ASCII characters in redirect URLs
         services.AddScoped<IActionResultExecutor<RedirectResult>, NopRedirectResultExecutor>();
+        services.AddScoped<IActionResultExecutor<LocalRedirectResult>, NopLocalRedirectResultExecutor>();
     }
 
     /// <summary>
@@ -473,5 +448,8 @@ public static class ServiceCollectionExtensions
 
         //client to request reCAPTCHA service
         services.AddHttpClient<CaptchaHttpClient>().WithProxy();
+
+        //client to request artificial intelligence service
+        services.AddHttpClient<ArtificialIntelligenceHttpClient>().WithProxy();
     }
 }

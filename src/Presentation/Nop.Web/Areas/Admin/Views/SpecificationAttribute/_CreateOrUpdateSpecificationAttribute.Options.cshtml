@@ -19,13 +19,11 @@
                 new ColumnProperty(nameof(SpecificationAttributeOptionModel.DisplayOrder))
                 {
                     Title = T("Admin.Catalog.Attributes.SpecificationAttributes.SpecificationAttribute.Options.Fields.DisplayOrder").Text,
-                    Width = "100",
                     ClassName =  NopColumnClassDefaults.CenterAll
                 },
                 new ColumnProperty(nameof(SpecificationAttributeOptionModel.NumberOfAssociatedProducts))
                 {
                     Title = T("Admin.Catalog.Attributes.SpecificationAttributes.SpecificationAttribute.Options.Fields.NumberOfAssociatedProducts").Text,
-                    Width = "250",
                     ClassName =  NopColumnClassDefaults.CenterAll
                 },
                 new ColumnProperty(nameof(SpecificationAttributeOptionModel.Id))
@@ -47,7 +45,7 @@
     
         <script>
             function renderColumnEdit(data, type, row, meta) {
-                return '<button onclick=\"javascript:OpenWindow(\'@Url.Content("~/Admin/SpecificationAttribute/OptionEditPopup/")' + data + '?btnId=btnRefresh&formId=specificationattribute-form\', 800, 400, true); return false;\" class="btn btn-default"><i class="fas fa-pencil-alt"></i>@T("Admin.Common.Edit").Text</button>';
+                return '<button onclick=\"javascript:OpenWindow(\'@Url.Content("~/Admin/SpecificationAttribute/OptionEditPopup/")' + data + '?btnId=btnRefresh&formId=specificationattribute-form\', 800, 400, true); return false;\" class="btn btn-default"><i class="fas fa-pencil"></i>@T("Admin.Common.Edit").Text</button>';
             }
         </script>
     </div>

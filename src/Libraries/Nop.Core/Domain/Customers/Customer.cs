@@ -94,6 +94,11 @@ public partial class Customer : BaseEntity, ISoftDeletedEntity
     public string Phone { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the user's phone number has been verified
+    /// </summary>
+    public bool PhoneSmsVerified { get; set; }
+
+    /// <summary>
     /// Gets or sets the fax
     /// </summary>
     public string Fax { get; set; }
@@ -234,9 +239,34 @@ public partial class Customer : BaseEntity, ISoftDeletedEntity
     public int? BillingAddressId { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the customer is required to change password
+    /// </summary>
+    public bool MustChangePassword { get; set; }
+
+    /// <summary>
     /// Gets or sets the shipping address identifier
     /// </summary>
     public int? ShippingAddressId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the date and time (in UTC) when the customer's shopping cart was last updated
+    /// </summary>
+    public DateTime? LastShoppingCartUpdateDateUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the current follow-up number for the abandoned shopping cart
+    /// </summary>
+    public int? LastAbandonedCartFollowUpNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the date and time (UTC) when the last follow-up for the abandoned shopping cart was sent
+    /// </summary>
+    public DateTime? LastAbandonedCartFollowUpDateUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the date and time (in UTC) of the customer registration follow-up
+    /// </summary>
+    public DateTime? RegistrationFollowUpDateUtc { get; set; }
 
     #region Custom properties
 

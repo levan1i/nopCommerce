@@ -50,7 +50,7 @@
             <div class="row">
                 <div class="col-md-8 offset-md-5">
                     <button type="button" id="search-orders" class="btn btn-primary btn-search">
-                        <i class="fas fa-search"></i>
+                        <i class="fas fa-magnifying-glass"></i>
                         @T("Admin.Common.Search")
                     </button>
                 </div>
@@ -79,8 +79,7 @@
                 {
                     new ColumnProperty(nameof(AffiliatedOrderModel.CustomOrderNumber))
                     {
-                        Title = T("Admin.Affiliates.Orders.CustomOrderNumber").Text,
-                        Width = "200"
+                        Title = T("Admin.Affiliates.Orders.CustomOrderNumber").Text
                     },
                     new ColumnProperty(nameof(AffiliatedOrderModel.OrderStatus))
                     {
@@ -107,7 +106,7 @@
                     new ColumnProperty(nameof(AffiliatedOrderModel.Id))
                     {
                         Title = T("Admin.Common.View").Text,
-                        Width = "150",
+                        Width = "100",
                         ClassName = NopColumnClassDefaults.Button,
                         Render = new RenderButtonView(new DataUrl("~/Admin/Order/Edit/", nameof(AffiliatedOrderModel.Id)))
                     }

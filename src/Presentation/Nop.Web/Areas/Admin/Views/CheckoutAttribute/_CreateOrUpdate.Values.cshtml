@@ -18,13 +18,11 @@
                 },
                 new ColumnProperty(nameof(CheckoutAttributeValueModel.PriceAdjustment))
                 {
-                    Title = T("Admin.Catalog.Attributes.CheckoutAttributes.Values.Fields.PriceAdjustment").Text,
-                    Width = "200"
+                    Title = T("Admin.Catalog.Attributes.CheckoutAttributes.Values.Fields.PriceAdjustment").Text
                 },
                 new ColumnProperty(nameof(CheckoutAttributeValueModel.WeightAdjustment))
                 {
-                    Title = T("Admin.Catalog.Attributes.CheckoutAttributes.Values.Fields.WeightAdjustment").Text,
-                    Width = "200"
+                    Title = T("Admin.Catalog.Attributes.CheckoutAttributes.Values.Fields.WeightAdjustment").Text
                 },
                 new ColumnProperty(nameof(CheckoutAttributeValueModel.IsPreSelected))
                 {
@@ -86,6 +84,6 @@ else
 
 <script>
     function renderColumnEdit(data, type, row, meta) {
-        return '<button onclick=\"javascript:OpenWindow(\'@Url.Content("~/Admin/CheckoutAttribute/ValueEditPopup/")' + data + '?btnId=btnRefresh&formId=checkoutattribute-form\', 800, 400, true); return false;\" class="btn btn-default"><i class="fas fa-pencil-alt"></i>@T("Admin.Common.Edit").Text</button>';
+        return '<button onclick=\"javascript:OpenWindow(\'@Url.Content("~/Admin/CheckoutAttribute/ValueEditPopup/")' + data + '?btnId=btnRefresh&formId=checkoutattribute-form\', 800, 400, true); return false;\" class="btn btn-default"><i class="fas fa-pencil"></i>@T("Admin.Common.Edit").Text</button>';
     }
 </script>

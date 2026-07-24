@@ -3,15 +3,15 @@
 @using Nop.Services.Authentication.MultiFactor
 @using Nop.Services.Catalog
 @using Nop.Services.Cms
+@using Nop.Services.Messages
 @using Nop.Services.Payments
 @using Nop.Services.Plugins
 @using Nop.Services.Shipping
 @using Nop.Services.Shipping.Pickup
 @using Nop.Services.Tax
 @inject IPluginService pluginService
-@inject IWebHelper webHelper
 @{
-    var plugin = pluginService.FindPluginByTypeInAssembly((this.ViewContext.ActionDescriptor as ControllerActionDescriptor).ControllerTypeInfo);
+    var plugin = pluginService.FindPluginByTypeInAssembly((ViewContext.ActionDescriptor as ControllerActionDescriptor).ControllerTypeInfo);
 
     //friendly name
     var friendlyName = plugin?.PluginDescriptor.FriendlyName;
@@ -57,6 +57,15 @@
         backToLocale = "Admin.Configuration.Tax.Providers.BackToList";
         listActionMethodName = "List";
         listControllerName = "Tax";
+    }
+    else if (plugin is ISmsProvider)
+    {
+        //sms provider
+        activeMenuSystemName = "Sms providers";
+        configureLocale = "Admin.Configuration.Sms.Providers.Configure";
+        backToLocale = "Admin.Configuration.Sms.Providers.BackToList";
+        listActionMethodName = "List";
+        listControllerName = "Sms";
     }
     else if (plugin is IExternalAuthenticationMethod)
     {
@@ -105,8 +114,7 @@
         listControllerName = "Plugin";
     }
 
-    //IAdminMenuPlugin can set own active menu item
-    if (plugin is IAdminMenuPlugin && NopHtml.GetActiveMenuItemSystemName() is string menuItem && !string.IsNullOrEmpty(menuItem))
+    if (NopHtml.GetActiveMenuItemSystemName() is { } menuItem && !string.IsNullOrEmpty(menuItem))
         activeMenuSystemName = menuItem;
 
     Layout = "_AdminLayout";
@@ -114,7 +122,6 @@
     ViewBag.PageTitle = T(configureLocale).Text + " - " + friendlyName;
     //active menu item (system name)
     NopHtml.SetActiveMenuItemSystemName(activeMenuSystemName);
-
 }
 <div class="content-header clearfix">
     <h1 class="float-left">

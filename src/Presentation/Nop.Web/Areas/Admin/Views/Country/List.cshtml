@@ -14,15 +14,15 @@
     </h1>
     <div class="float-right">
         <a asp-action="Create" class="btn btn-primary">
-            <i class="fas fa-plus-square"></i>
+            <i class="fas fa-square-plus"></i>
             @T("Admin.Common.AddNew")
         </a>
         <button type="button" id="publish-selected" class="btn bg-teal">
-            <i class="fas fa-check-square"></i>
+            <i class="fas fa-square-check"></i>
             @T("Admin.Configuration.Countries.PublishSelected")
         </button>
         <button type="button" id="unpublish-selected" class="btn btn-secondary">
-            <i class="fas fa-minus-square"></i>
+            <i class="fas fa-square-minus"></i>
             @T("Admin.Configuration.Countries.UnpublishSelected")
         </button>
         <a asp-action="ExportCsv" class="btn btn-success">
@@ -81,18 +81,15 @@
                             },
                             new ColumnProperty(nameof(CountryModel.TwoLetterIsoCode))
                             {
-                                Title = T("Admin.Configuration.Countries.Fields.TwoLetterIsoCode").Text,
-                                Width = "150"
+                                Title = T("Admin.Configuration.Countries.Fields.TwoLetterIsoCode").Text
                             },
                             new ColumnProperty(nameof(CountryModel.ThreeLetterIsoCode))
                             {
-                                Title = T("Admin.Configuration.Countries.Fields.ThreeLetterIsoCode").Text,
-                                Width = "150"
+                                Title = T("Admin.Configuration.Countries.Fields.ThreeLetterIsoCode").Text
                             },
                             new ColumnProperty(nameof(CountryModel.NumericIsoCode))
                             {
-                                Title = T("Admin.Configuration.Countries.Fields.NumericIsoCode").Text,
-                                Width = "120"
+                                Title = T("Admin.Configuration.Countries.Fields.NumericIsoCode").Text
                             },
                             new ColumnProperty(nameof(CountryModel.SubjectToVat))
                             {
@@ -104,28 +101,26 @@
                             new ColumnProperty(nameof(CountryModel.NumberOfStates))
                             {
                                 Title = T("Admin.Configuration.Countries.Fields.NumberOfStates").Text,
-                                Width = "150",
                                 ClassName =  NopColumnClassDefaults.CenterAll
                             },
                             new ColumnProperty(nameof(CountryModel.DisplayOrder))
                             {
                                 Title = T("Admin.Configuration.Countries.Fields.DisplayOrder").Text,
-                                Width = "100",
                                 ClassName = NopColumnClassDefaults.CenterAll
                             },
                             new ColumnProperty(nameof(CountryModel.Published))
                             {
                                 Title = T("Admin.Configuration.Countries.Fields.Published").Text,
-                                Width = "80",
+                                Width = "100",
                                 ClassName =  NopColumnClassDefaults.CenterAll,
                                 Render = new RenderBoolean()
                             },
                             new ColumnProperty(nameof(CountryModel.Id))
                             {
                                 Title = T("Admin.Common.Edit").Text,
-                                Width = "50",
+                                Width = "100",
                                 ClassName =  NopColumnClassDefaults.Button,
-                                Render = new RenderButtonEdit(new DataUrl("Edit"))
+                                Render = new RenderButtonEdit(new DataUrl("~/Admin/Country/Edit"))
                             }
                         }
                     })

@@ -117,7 +117,12 @@ public partial class FluentMigratorMetadataReader : IMetadataReader
             };
         });
 
-        return attribute is null ? [] : [attribute];
+        var result = new List<MappingAttribute>();
+
+        if (attribute is ColumnAttribute column)
+            result.Add(column);
+
+        return result.ToArray();
     }
 
     /// <summary>
